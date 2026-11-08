@@ -41,6 +41,18 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
+# 4b. Create a Second Public Subnet (Required for the Load Balancer)
+resource "aws_subnet" "public_subnet_2" {
+  vpc_id                  = aws_vpc.main_network.id
+  cidr_block              = "10.0.3.0/24" 
+  map_public_ip_on_launch = true 
+  availability_zone       = "us-east-1b" # Different AZ for High Availability
+
+  tags = {
+    Name = "Public-Subnet-DMZ-2"
+  }
+}
+
 # 5. Create the Private Subnet (Where our secure workloads will live)
 resource "aws_subnet" "private_subnet" {
   vpc_id            = aws_vpc.main_network.id
@@ -72,6 +84,12 @@ resource "aws_route_table_association" "public_rt_assoc" {
   route_table_id = aws_route_table.public_rt.id
 }
 
+# 7b. Associate the second subnet with the public route table
+resource "aws_route_table_association" "public_rt_assoc_2" {
+  subnet_id      = aws_subnet.public_subnet_2.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
 # 8. Fetch the latest Amazon Linux 2023 AMI (Operating System Image)
 data "aws_ami" "amazon_linux" {
   most_recent = true
@@ -83,40 +101,47 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# 9. Create the Security Group (Virtual Firewall)
-resource "aws_security_group" "web_sg" {
-  name        = "web-server-sg"
-  description = "Allow HTTP and SSH traffic (Phase 1 Permissive)"
+# 9a. The Load Balancer Security Group (Internet Facing)
+resource "aws_security_group" "alb_sg" {
+  name        = "alb-security-group"
+  description = "Allow HTTP traffic from the internet to the Load Balancer"
   vpc_id      = aws_vpc.main_network.id
 
-  # Inbound rule for Web Traffic
   ingress {
-    description = "HTTP from anywhere"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Inbound rule for Terminal Access
-  ingress {
-    description = "SSH from anywhere (Will be restricted in Phase 2)"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Outbound rule allowing the server to download updates/packages
   egress {
     from_port   = 0
     to_port     = 0
-    protocol    = "-1" # -1 means all protocols
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
-  tags = {
-    Name = "Web-Server-SG"
+}
+
+# 9b. The EC2 Web Server Security Group (Zero Trust - Isolated)
+resource "aws_security_group" "web_sg" {
+  name        = "web-server-sg"
+  description = "Allow HTTP strictly from the ALB only"
+  vpc_id      = aws_vpc.main_network.id
+
+  ingress {
+    description     = "Only accept traffic from the Load Balancer"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    # Notice we removed cidr_blocks = ["0.0.0.0/0"] and replaced it with this:
+    security_groups = [aws_security_group.alb_sg.id] 
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -160,4 +185,46 @@ resource "aws_instance" "web_server" {
 output "flask_app_url" {
   description = "Click this link to view your migrated application"
   value       = "http://${aws_instance.web_server.public_ip}"
+}
+
+# 12. Create the Application Load Balancer
+resource "aws_lb" "app_alb" {
+  name               = "migration-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [aws_subnet.public_subnet.id, aws_subnet.public_subnet_2.id]
+}
+
+# 13. Create the Target Group (The destination for the ALB traffic)
+resource "aws_lb_target_group" "app_tg" {
+  name     = "migration-target-group"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main_network.id
+}
+
+# 14. Create the Listener (Tells the ALB to listen on Port 80 and forward to Target Group)
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = aws_lb.app_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app_tg.arn
+  }
+}
+
+# 15. Attach the EC2 instance to the Target Group
+resource "aws_lb_target_group_attachment" "ec2_attach" {
+  target_group_arn = aws_lb_target_group.app_tg.arn
+  target_id        = aws_instance.web_server.id
+  port             = 80
+}
+
+# 16. Output the secure Load Balancer URL
+output "secure_alb_url" {
+  description = "Access the application securely through the Load Balancer"
+  value       = "http://${aws_lb.app_alb.dns_name}"
 }
