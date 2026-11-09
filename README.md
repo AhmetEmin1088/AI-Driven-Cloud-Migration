@@ -19,7 +19,7 @@ This repository demonstrates an end-to-end enterprise cloud migration and securi
 ## Phase 3: AI-Driven Incident Response
 - Activated AWS CloudTrail for comprehensive API and account auditing.
 - Developed a Python-based AI Security Analyst (`incident_responder.py`).
-- Integrated the `google-genai` SDK and the Gemini 2.0 Flash model.
+- Integrated the `google-genai` SDK and the Gemini 3.8 Flash model.
 - Successfully parsed live CloudTrail JSON logs and generated a professional, CISO-ready Incident Response report detecting Root account usage and perimeter exposure.
 
 ## How to Run This Project
