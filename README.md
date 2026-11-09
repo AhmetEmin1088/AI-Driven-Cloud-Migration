@@ -16,9 +16,20 @@ This repository demonstrates an end-to-end enterprise cloud migration and securi
 - Enforced Zero Trust network boundaries by stripping public internet ingress (`0.0.0.0/0`) from the application server.
 - Configured strict Security Group referencing, ensuring the backend EC2 instance silently drops all traffic not explicitly originating from the ALB.
 
-## Phase 3: Coming Soon...
-- AI-Driven Incident Response Log Analysis (AWS CloudTrail + LLM Integration)
-- Automated threat detection and AI response generation
+## Phase 3: AI-Driven Incident Response (Completed)
+- Activated AWS CloudTrail for comprehensive API and account auditing.
+- Developed a Python-based AI Security Analyst (`incident_responder.py`).
+- Integrated the `google-genai` SDK and the Gemini 2.0 Flash model.
+- Successfully parsed live CloudTrail JSON logs and generated a professional, CISO-ready Incident Response report detecting Root account usage and perimeter exposure.
+
+## How to Run This Project
+1. Configure AWS CLI with an IAM user (`aws configure`).
+2. Run `terraform init`, `plan`, and `apply` to build the infrastructure.
+3. Create a Python virtual environment: `python -m venv venv && source venv/bin/activate`
+4. Install dependencies: `pip install -r requirements.txt`
+5. Export your Gemini API key: `export GEMINI_API_KEY="your_key"`
+6. Run the AI Analyst: `python incident_responder.py`
+7. Tear down: `terraform destroy`
 
 ## Tech Stack
 **Cloud Provider:** AWS (Amazon Web Services)
