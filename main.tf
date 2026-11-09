@@ -1,18 +1,15 @@
-# 1. Define the Cloud Provider
+# Cloud Provider
 provider "aws" {
   region = "us-east-1"
 }
 
-# 2. Build the Virtual Private Cloud (VPC)
+# Virtual Private Cloud (VPC)
 resource "aws_vpc" "main_network" {
-  # This CIDR block provides 65,536 private IP addresses
   cidr_block           = "10.0.0.0/16" 
   
-  # DNS support is required for advanced routing and database connections later
   enable_dns_support   = true
   enable_dns_hostnames = true
 
-  # Tagging is a mandatory enterprise practice for billing and resource tracking
   tags = {
     Name        = "Enterprise-Migration-VPC"
     Environment = "Dev"
@@ -20,7 +17,7 @@ resource "aws_vpc" "main_network" {
   }
 }
 
-# 3. Create the Internet Gateway (The door to the internet)
+# Internet Gateway (The door to the internet)
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main_network.id
 
@@ -29,11 +26,11 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-# 4. Create the Public Subnet 
+# Public Subnet 
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main_network.id
-  cidr_block              = "10.0.1.0/24" # 256 IP addresses
-  map_public_ip_on_launch = true # Automatically give resources here a public IP
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
   availability_zone       = "us-east-1a"
 
   tags = {
@@ -41,22 +38,22 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
-# 4b. Create a Second Public Subnet (Required for the Load Balancer)
+# Second Public Subnet (Required for the Load Balancer)
 resource "aws_subnet" "public_subnet_2" {
   vpc_id                  = aws_vpc.main_network.id
   cidr_block              = "10.0.3.0/24" 
   map_public_ip_on_launch = true 
-  availability_zone       = "us-east-1b" # Different AZ for High Availability
+  availability_zone       = "us-east-1b"
 
   tags = {
     Name = "Public-Subnet-DMZ-2"
   }
 }
 
-# 5. Create the Private Subnet (Where our secure workloads will live)
+# Private Subnet (Where our secure workloads will live)
 resource "aws_subnet" "private_subnet" {
   vpc_id            = aws_vpc.main_network.id
-  cidr_block        = "10.0.2.0/24" # 256 IP addresses
+  cidr_block        = "10.0.2.0/24"
   availability_zone = "us-east-1a"
 
   tags = {
@@ -64,12 +61,12 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
-# 6. Create a Route Table for the Public Subnet (The map directing traffic to the door)
+# Route Table for the Public Subnet (The map directing traffic to the door)
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main_network.id
 
   route {
-    cidr_block = "0.0.0.0/0" # "All internet traffic"
+    cidr_block = "0.0.0.0/0" # All internet traffic
     gateway_id = aws_internet_gateway.igw.id
   }
 
@@ -78,19 +75,19 @@ resource "aws_route_table" "public_rt" {
   }
 }
 
-# 7. Associate the Route Table with the Public Subnet
+# Associate the Route Table with the Public Subnet
 resource "aws_route_table_association" "public_rt_assoc" {
   subnet_id      = aws_subnet.public_subnet.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-# 7b. Associate the second subnet with the public route table
+# Associate the second subnet with the public route table
 resource "aws_route_table_association" "public_rt_assoc_2" {
   subnet_id      = aws_subnet.public_subnet_2.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-# 8. Fetch the latest Amazon Linux 2023 AMI (Operating System Image)
+# Latest Amazon Linux 2023 AMI (Operating System Image)
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -101,7 +98,7 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# 9a. The Load Balancer Security Group (Internet Facing)
+# The Load Balancer Security Group (Internet Facing)
 resource "aws_security_group" "alb_sg" {
   name        = "alb-security-group"
   description = "Allow HTTP traffic from the internet to the Load Balancer"
@@ -122,7 +119,7 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-# 9b. The EC2 Web Server Security Group (Zero Trust - Isolated)
+# The EC2 Web Server Security Group (Zero Trust - Isolated)
 resource "aws_security_group" "web_sg" {
   name        = "web-server-sg"
   description = "Allow HTTP strictly from the ALB only"
@@ -133,7 +130,6 @@ resource "aws_security_group" "web_sg" {
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
-    # Notice we removed cidr_blocks = ["0.0.0.0/0"] and replaced it with this:
     security_groups = [aws_security_group.alb_sg.id] 
   }
 
@@ -145,14 +141,13 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-# 10. Deploy the EC2 Instance with a Python/Flask App
+# EC2 Instance with a Python/Flask App
 resource "aws_instance" "web_server" {
   ami           = data.aws_ami.amazon_linux.id
-  instance_type = "t3.micro" # Free-tier eligible compute
+  instance_type = "t3.micro"
   subnet_id     = aws_subnet.public_subnet.id
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
-  # user_data is a script that runs automatically the very first time the server boots
   user_data = <<-EOF
               #!/bin/bash
               dnf update -y
@@ -181,13 +176,13 @@ resource "aws_instance" "web_server" {
   }
 }
 
-# 11. Output the Public IP address to the terminal
+# Output the Public IP address to the terminal
 output "flask_app_url" {
   description = "Click this link to view your migrated application"
   value       = "http://${aws_instance.web_server.public_ip}"
 }
 
-# 12. Create the Application Load Balancer
+# Application Load Balancer
 resource "aws_lb" "app_alb" {
   name               = "migration-alb"
   internal           = false
@@ -196,7 +191,7 @@ resource "aws_lb" "app_alb" {
   subnets            = [aws_subnet.public_subnet.id, aws_subnet.public_subnet_2.id]
 }
 
-# 13. Create the Target Group (The destination for the ALB traffic)
+# Target Group (The destination for the ALB traffic)
 resource "aws_lb_target_group" "app_tg" {
   name     = "migration-target-group"
   port     = 80
@@ -204,7 +199,7 @@ resource "aws_lb_target_group" "app_tg" {
   vpc_id   = aws_vpc.main_network.id
 }
 
-# 14. Create the Listener (Tells the ALB to listen on Port 80 and forward to Target Group)
+# Listener (Tells the ALB to listen on Port 80 and forward to Target Group)
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.app_alb.arn
   port              = "80"
@@ -216,15 +211,73 @@ resource "aws_lb_listener" "front_end" {
   }
 }
 
-# 15. Attach the EC2 instance to the Target Group
+# Attach the EC2 instance to the Target Group
 resource "aws_lb_target_group_attachment" "ec2_attach" {
   target_group_arn = aws_lb_target_group.app_tg.arn
   target_id        = aws_instance.web_server.id
   port             = 80
 }
 
-# 16. Output the secure Load Balancer URL
+# Output the secure Load Balancer URL
 output "secure_alb_url" {
   description = "Access the application securely through the Load Balancer"
   value       = "http://${aws_lb.app_alb.dns_name}"
+}
+
+# Current AWS Account ID
+data "aws_caller_identity" "current" {}
+
+# S3 Bucket to store CloudTrail logs
+resource "aws_s3_bucket" "cloudtrail_logs" {
+  bucket        = "migration-cloudtrail-logs-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
+
+  tags = {
+    Name = "CloudTrail-Log-Bucket"
+  }
+}
+
+# S3 Bucket Policy (Allowing CloudTrail to write to S3)
+resource "aws_s3_bucket_policy" "cloudtrail_policy" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AWSCloudTrailAclCheck"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.cloudtrail_logs.arn
+      },
+      {
+        Sid    = "AWSCloudTrailWrite"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.cloudtrail_logs.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# AWS CloudTrail (The Surveillance Camera)
+resource "aws_cloudtrail" "main_trail" {
+  name                          = "migration-security-trail"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail_logs.id
+  include_global_service_events = true
+  is_multi_region_trail         = false
+  enable_log_file_validation    = true
+
+  depends_on = [aws_s3_bucket_policy.cloudtrail_policy]
 }
