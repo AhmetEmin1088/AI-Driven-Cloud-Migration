@@ -1,3 +1,16 @@
+# ==========================================
+# ENTERPRISE BACKEND (Remote State & Locking)
+# ==========================================
+terraform {
+  backend "s3" {
+    bucket         = "ai-migration-tf-state-459803359081"
+    key            = "migration/terraform.tfstate" # The name of the file inside the bucket
+    region         = "us-east-1"
+    use_lockfile = true
+    encrypt        = true # Ensures the state file is encrypted at rest in S3
+  }
+}
+
 # Cloud Provider
 provider "aws" {
   region = "us-east-1"
@@ -280,4 +293,58 @@ resource "aws_cloudtrail" "main_trail" {
   enable_log_file_validation    = true
 
   depends_on = [aws_s3_bucket_policy.cloudtrail_policy]
+}
+
+# ==========================================
+# PHASE 4: Zero Trust Identity (OIDC & CI/CD)
+# ==========================================
+
+# 21. Create the OIDC Provider for GitHub Actions
+resource "aws_iam_openid_connect_provider" "github" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  
+  # AWS natively trusts GitHub's certificate now, but requires this field. 
+  # This is GitHub's standard thumbprint.
+  thumbprint_list = ["1b511abead59c6ce207077c0bf0e0043b1382612"] 
+}
+
+# 22. Create the IAM Role that GitHub will assume
+resource "aws_iam_role" "github_actions_role" {
+  name = "github-actions-terraform-role"
+
+  # The Trust Policy: Only allow GitHub Actions from YOUR specific repository to assume this role
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          }
+          # CRITICAL SECURITY: Restrict to your exact GitHub Username and Repository
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:AhmetEmin1088/AI-Driven-Cloud-Migration:*"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# 23. Grant the Role permission to build infrastructure (AdministratorAccess)
+resource "aws_iam_role_policy_attachment" "github_actions_admin" {
+  role       = aws_iam_role.github_actions_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+# 24. Output the Role ARN so we can use it in our GitHub Pipeline
+output "github_actions_role_arn" {
+  description = "The IAM Role ARN for GitHub Actions to use"
+  value       = aws_iam_role.github_actions_role.arn
 }
