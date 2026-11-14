@@ -4,7 +4,7 @@ import os
 from google import genai
 from datetime import datetime, timedelta
 
-# 1. Initialize Modern Gemini AI Client
+# Initialize Modern Gemini AI Client
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     print("ERROR: Please set your GEMINI_API_KEY environment variable.")
@@ -12,7 +12,7 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-# 2. Initialize AWS CloudTrail Client
+# Initialize AWS CloudTrail Client
 cloudtrail = boto3.client('cloudtrail', region_name='us-east-1')
 
 def get_recent_aws_events():
@@ -50,7 +50,7 @@ def analyze_with_ai(events):
     {json.dumps(events, indent=2)}
     """
     
-    # Using the new SDK syntax and the 2.0-flash model
+    # Using the new SDK syntax and the 3.8-flash model
     response = client.models.generate_content(
         model='gemini-3.8-flash',
         contents=prompt

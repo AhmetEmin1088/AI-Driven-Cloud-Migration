@@ -1,26 +1,25 @@
 name: "Enterprise GitOps Pipeline"
 
-# 1. When should this pipeline run? Every time you push to the 'main' branch.
 on:
   push:
     branches:
       - main
 
-# 2. Permissions required for Zero Trust OIDC authentication
+# Permissions required for Zero Trust OIDC authentication
 permissions:
-  id-token: write # Gives GitHub permission to receive a temporary token from AWS
-  contents: read  # Gives GitHub permission to read your Terraform code
+  id-token: write
+  contents: read  
 
 jobs:
   deploy-infrastructure:
     name: "Terraform Deploy"
-    runs-on: ubuntu-latest # This is a temporary Linux server GitHub spins up for free
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 3. The Magic of OIDC (No Hardcoded Access Keys!)
+      # No Hardcoded Access Keys
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -30,7 +29,7 @@ jobs:
       - name: Setup HashiCorp Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # 4. The Automated Terraform Workflow
+      # Automated Terraform Workflow
       - name: Terraform Init
         run: terraform init
 
@@ -38,5 +37,4 @@ jobs:
         run: terraform plan -no-color
 
       - name: Terraform Apply
-        # -auto-approve tells Terraform not to wait for human confirmation
         run: terraform apply -auto-approve
