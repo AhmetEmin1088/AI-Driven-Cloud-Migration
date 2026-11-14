@@ -29,13 +29,14 @@ This repository demonstrates an end-to-end enterprise cloud migration and securi
 - Built an automated CI/CD GitOps pipeline (`.github/workflows/terraform.yml`) that authenticates via OIDC and automatically runs `terraform init`, `plan`, and `apply` on every push to `main`.
 
 ## How to Run This Project
-1. Configure AWS CLI with an IAM user (`aws configure`).
-2. Run `terraform init`, `plan`, and `apply` to build the infrastructure.
-3. Create a Python virtual environment: `python -m venv venv && source venv/bin/activate`
-4. Install dependencies: `pip install -r requirements.txt`
-5. Export your Gemini API key: `export GEMINI_API_KEY="your_key"`
-6. Run the AI Analyst: `python incident_responder.py`
-7. Tear down: `terraform destroy`
+1. Configure AWS CLI with an IAM user (`aws configure`) for initial setup.
+2. Initialize the remote backend in the `enterprise-backend` folder.
+3. Push changes to the `main` branch. GitHub Actions will automatically run `terraform init`, `plan`, and `apply` via OIDC.
+4. Create a Python virtual environment: `python -m venv venv && source venv/bin/activate`
+5. Install dependencies: `pip install -r requirements.txt`
+6. Export your Gemini API key: `export GEMINI_API_KEY="your_key"`
+7. Run the AI Analyst: `python incident_responder.py`
+8. Tear down: Run `terraform destroy` locally to avoid automated rebuilds.
 
 ## Tech Stack
 **Cloud Provider:** AWS (VPC, EC2, ALB, S3, CloudTrail, IAM OIDC, STS)
