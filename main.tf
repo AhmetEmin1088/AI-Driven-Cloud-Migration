@@ -304,16 +304,14 @@ resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   
-  # AWS natively trusts GitHub's certificate now, but requires this field. 
-  # This is GitHub's standard thumbprint.
-  thumbprint_list = ["1b511abead59c6ce207077c0bf0e0043b1382612"] 
+  # Update this to match the thumbprint you retrieved in the AWS Console
+  thumbprint_list = ["ab9d0263244dd0326eb67015705a667e79cfe998"] 
 }
 
 # 22. Create the IAM Role that GitHub will assume
 resource "aws_iam_role" "github_actions_role" {
   name = "github-actions-terraform-role"
 
-  # The Trust Policy: Only allow GitHub Actions from YOUR specific repository to assume this role
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -327,9 +325,11 @@ resource "aws_iam_role" "github_actions_role" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
-          # CRITICAL SECURITY: Restrict to your exact GitHub Username and Repository
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:AhmetEmin1088/AI-Driven-Cloud-Migration:*"
+            "token.actions.githubusercontent.com:sub" = [
+                "repo:AhmetEmin1088/*",
+                "repo:ahmetemin1088/*"
+            ]
           }
         }
       }
