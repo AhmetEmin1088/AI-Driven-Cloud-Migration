@@ -22,6 +22,12 @@ This repository demonstrates an end-to-end enterprise cloud migration and securi
 - Integrated the `google-genai` SDK and the Gemini 3.8 Flash model.
 - Successfully parsed live CloudTrail JSON logs and generated a professional, CISO-ready Incident Response report detecting Root account usage and perimeter exposure.
 
+## Phase 4: Enterprise GitOps, Remote State & Zero Trust Identity
+- Migrated local Terraform state to a centralized, encrypted AWS S3 Remote Backend with native state locking (`use_lockfile`).
+- Eliminated static IAM access keys by configuring an AWS OpenID Connect (OIDC) Identity Provider for GitHub Actions.
+- Engineered a least-privilege IAM Trust Policy restricted to immutable GitHub User and Repository IDs to prevent repository jacking.
+- Built an automated CI/CD GitOps pipeline (`.github/workflows/terraform.yml`) that authenticates via OIDC and automatically runs `terraform init`, `plan`, and `apply` on every push to `main`.
+
 ## How to Run This Project
 1. Configure AWS CLI with an IAM user (`aws configure`).
 2. Run `terraform init`, `plan`, and `apply` to build the infrastructure.
@@ -32,7 +38,7 @@ This repository demonstrates an end-to-end enterprise cloud migration and securi
 7. Tear down: `terraform destroy`
 
 ## Tech Stack
-**Cloud Provider:** AWS (Amazon Web Services)
-**IaC:** Terraform
-**Compute & Network:** VPC, EC2, Subnets, Security Groups, Application Load Balancer (ALB)
-**Language:** Python (Flask)
+**Cloud Provider:** AWS (VPC, EC2, ALB, S3, CloudTrail, IAM OIDC, STS)
+**IaC & State Management:** Terraform, AWS S3 Remote Backend
+**CI/CD & GitOps:** GitHub Actions (OIDC Federation)
+**Language & AI:** Python (Flask, Boto3, Google GenAI SDK / Gemini 3.8 Flash)
