@@ -327,8 +327,8 @@ resource "aws_iam_role" "github_actions_role" {
           }
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
-                "repo:AhmetEmin1088/*",
-                "repo:ahmetemin1088/*"
+              "repo:AhmetEmin1088@77226294/AI-Driven-Cloud-Migration@1447508912:*",
+              "repo:AhmetEmin1088*/AI-Driven-Cloud-Migration*"
             ]
           }
         }
