@@ -1,7 +1,7 @@
-# Local .terraform directories
+# Local .terraform directories and plugins
 **/.terraform/*
 
-# .tfstate files
+# Terraform State files (CRITICAL SECURITY)
 *.tfstate
 *.tfstate.*
 
@@ -9,11 +9,39 @@
 crash.log
 crash.*.log
 
+# Ignore Terraform variables files (often contain secrets/passwords)
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore Python Virtual Environment
+venv/
+env/
+.env/
+
+# Ignore Environment Variables files (CRITICAL SECURITY: API KEYS)
+.env
+.env.*
+
+# Ignore Python Cache (Keeps repo clean)
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Ignore OS generated files
 .DS_Store
+Thumbs.db
 
 # Ignore AWS CLI credentials if accidentally placed here
 .aws/
 
-# Ignore Python Virtual Environment
-venv/
+# Ignore IDE folders (VS Code, Windsurf, IntelliJ etc.)
+.vscode/
+.idea/
