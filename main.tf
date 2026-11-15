@@ -167,14 +167,94 @@ resource "aws_instance" "web_server" {
               dnf install -y python3 python3-pip
               pip3 install Flask
               
-              # Create a simple Python Flask application
+              # Create a modern Python Flask application
               cat << 'EOF_APP' > /home/ec2-user/app.py
               from flask import Flask
               app = Flask(__name__)
               
+              HTML_PAGE = """
+              <!DOCTYPE html>
+              <html lang="en">
+              <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Cloud Architecture Status</title>
+                  <style>
+                      body {
+                          margin: 0;
+                          padding: 0;
+                          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                          background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+                          color: #ffffff;
+                          display: flex;
+                          justify-content: center;
+                          align-items: center;
+                          height: 100vh;
+                      }
+                      .container {
+                          background: rgba(255, 255, 255, 0.05);
+                          backdrop-filter: blur(12px);
+                          -webkit-backdrop-filter: blur(12px);
+                          border: 1px solid rgba(255, 255, 255, 0.1);
+                          border-radius: 16px;
+                          padding: 50px 40px;
+                          max-width: 650px;
+                          text-align: center;
+                          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                      }
+                      h1 {
+                          font-size: 2.2rem;
+                          margin-bottom: 15px;
+                          color: #00d2ff;
+                          letter-spacing: -0.5px;
+                      }
+                      p {
+                          font-size: 1.1rem;
+                          line-height: 1.7;
+                          color: #b3c5cd;
+                          margin-bottom: 30px;
+                      }
+                      .status-badges {
+                          display: flex;
+                          justify-content: center;
+                          gap: 15px;
+                          flex-wrap: wrap;
+                      }
+                      .badge {
+                          padding: 8px 16px;
+                          background: rgba(0, 210, 255, 0.1);
+                          border: 1px solid rgba(0, 210, 255, 0.4);
+                          border-radius: 50px;
+                          font-size: 0.85rem;
+                          font-weight: 600;
+                          color: #00d2ff;
+                          letter-spacing: 0.5px;
+                          text-transform: uppercase;
+                      }
+                      .badge.secure {
+                          background: rgba(0, 255, 135, 0.1);
+                          border-color: rgba(0, 255, 135, 0.4);
+                          color: #00ff87;
+                      }
+                  </style>
+              </head>
+              <body>
+                  <div class="container">
+                      <h1>AI-Driven Cloud Migration</h1>
+                      <p>Welcome to the production environment. This application is securely hosted on AWS EC2, fully isolated within a private network boundary, and served through a Zero Trust Application Load Balancer.</p>
+                      <div class="status-badges">
+                          <div class="badge">Zero Trust Architecture</div>
+                          <div class="badge secure">Protected by AI SOC</div>
+                          <div class="badge">GitOps Deployed</div>
+                      </div>
+                  </div>
+              </body>
+              </html>
+              """
+              
               @app.route('/')
               def hello():
-                  return "<h1>Migration Phase 1: Lift & Shift Successful!</h1><p>Our Python Flask app is live on AWS.</p>"
+                  return HTML_PAGE
               
               if __name__ == '__main__':
                   app.run(host='0.0.0.0', port=80)
